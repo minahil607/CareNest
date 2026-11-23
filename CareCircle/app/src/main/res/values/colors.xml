@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="care_green_primary">#1F7A53</color>
+    <color name="care_green_light">#E5F4EC</color>
+    <color name="care_surface">#F7FAF8</color>
+</resources>

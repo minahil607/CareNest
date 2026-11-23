@@ -1,0 +1,184 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Private caregiver user root document storing authenticated account metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "CareProfile": {
+      "title": "CareProfile",
+      "description": "Primary care recipient medical summary, allergies, and daily care notes.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recipientName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "age": { "type": "integer" },
+        "dateOfBirth": { "type": "string", "maxLength": 40 },
+        "bloodType": { "type": "string", "maxLength": 16 },
+        "primaryDoctor": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 200 },
+        "allergies": { "type": "string", "maxLength": 400 },
+        "careNotes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "recipientName", "age", "bloodType", "createdAt", "updatedAt"]
+    },
+    "Medication": {
+      "title": "Medication",
+      "description": "Scheduled medication with dosage instructions, reminder time, and daily taken tracking.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "dosage": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "instructions": { "type": "string", "maxLength": 300 },
+        "timeHour": { "type": "integer" },
+        "timeMinute": { "type": "integer" },
+        "reminderEnabled": { "type": "boolean" },
+        "lastTakenDay": { "type": "string", "maxLength": 20 },
+        "lastTakenTimeLabel": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "dosage", "timeHour", "timeMinute", "reminderEnabled", "createdAt", "updatedAt"]
+    },
+    "CareTask": {
+      "title": "CareTask",
+      "description": "Daily care routine item with due time and daily completion date.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "details": { "type": "string", "maxLength": 400 },
+        "dueHour": { "type": "integer" },
+        "dueMinute": { "type": "integer" },
+        "lastCompletedDay": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "dueHour", "dueMinute", "createdAt", "updatedAt"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Upcoming or completed doctor visit with clinic details and notes.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "doctorName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "specialty": { "type": "string", "maxLength": 80 },
+        "location": { "type": "string", "maxLength": 160 },
+        "dateISO": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "timeHour": { "type": "integer" },
+        "timeMinute": { "type": "integer" },
+        "notes": { "type": "string", "maxLength": 400 },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "doctorName", "dateISO", "timeHour", "timeMinute", "isCompleted", "createdAt", "updatedAt"]
+    },
+    "EmergencyContact": {
+      "title": "EmergencyContact",
+      "description": "Emergency contact with phone number for quick calling.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "relationship": { "type": "string", "maxLength": 80 },
+        "phoneNumber": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "isPrimary": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "phoneNumber", "isPrimary", "createdAt", "updatedAt"]
+    },
+    "FamilyMember": {
+      "title": "FamilyMember",
+      "description": "Caregiver or family member participating in care coordination.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "relationship": { "type": "string", "maxLength": 60 },
+        "role": { "type": "string", "maxLength": 100 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "relationship", "createdAt", "updatedAt"]
+    },
+    "CareUpdate": {
+      "title": "CareUpdate",
+      "description": "Shared family care log update note.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "authorName", "message", "createdAt"]
+    },
+    "AdherenceLog": {
+      "title": "AdherenceLog",
+      "description": "Daily medication dose completion record used to track weekly adherence trends.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dayKey": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "medicationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "medicationName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "takenAtLabel": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "dayKey", "medicationId", "medicationName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Root caregiver account document used as ownership gate for all nested collections."
+    },
+    "/users/{userId}/profile/{profileId}": {
+      "schema": { "$ref": "#/entities/CareProfile" },
+      "description": "Private care recipient profile, allergies, and notes."
+    },
+    "/users/{userId}/medications/{medicationId}": {
+      "schema": { "$ref": "#/entities/Medication" },
+      "description": "Daily medication schedules and adherence tracking."
+    },
+    "/users/{userId}/adherenceLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AdherenceLog" },
+      "description": "Daily medication completion logs for weekly adherence trend analytics."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/CareTask" },
+      "description": "Daily care routine tasks."
+    },
+    "/users/{userId}/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Doctor appointments and visit notes."
+    },
+    "/users/{userId}/emergencyContacts/{contactId}": {
+      "schema": { "$ref": "#/entities/EmergencyContact" },
+      "description": "Emergency contacts for quick calling."
+    },
+    "/users/{userId}/familyMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/FamilyMember" },
+      "description": "Family caregivers and care roles."
+    },
+    "/users/{userId}/careUpdates/{updateId}": {
+      "schema": { "$ref": "#/entities/CareUpdate" },
+      "description": "Shared family care updates log."
+    }
+  }
+}

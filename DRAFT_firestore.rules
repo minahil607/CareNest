@@ -1,0 +1,301 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function parentUserExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isValidTime(hour, minute) {
+      return hour is int && hour >= 0 && hour <= 23 &&
+             minute is int && minute >= 0 && minute <= 59;
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidUserAccount(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['uid', 'displayName', 'email', 'createdAt', 'updatedAt']) &&
+             data.uid is string && data.uid == userId && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidCareProfile(data, userId) {
+      return data.keys().hasAll(['ownerId', 'recipientName', 'age', 'bloodType', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'recipientName', 'age', 'dateOfBirth', 'bloodType', 'primaryDoctor', 'address', 'allergies', 'careNotes', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 100 &&
+             data.age is int && data.age >= 0 && data.age <= 130 &&
+             (!('dateOfBirth' in data) || (data.dateOfBirth is string && data.dateOfBirth.size() <= 40)) &&
+             data.bloodType is string && data.bloodType.size() <= 16 &&
+             (!('primaryDoctor' in data) || (data.primaryDoctor is string && data.primaryDoctor.size() <= 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 200)) &&
+             (!('allergies' in data) || (data.allergies is string && data.allergies.size() <= 400)) &&
+             (!('careNotes' in data) || (data.careNotes is string && data.careNotes.size() <= 1000)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidMedication(data, userId) {
+      return data.keys().hasAll(['ownerId', 'name', 'dosage', 'timeHour', 'timeMinute', 'reminderEnabled', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'name', 'dosage', 'instructions', 'timeHour', 'timeMinute', 'reminderEnabled', 'lastTakenDay', 'lastTakenTimeLabel', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.dosage is string && data.dosage.size() >= 1 && data.dosage.size() <= 80 &&
+             (!('instructions' in data) || (data.instructions is string && data.instructions.size() <= 300)) &&
+             isValidTime(data.timeHour, data.timeMinute) &&
+             data.reminderEnabled is bool &&
+             (!('lastTakenDay' in data) || (data.lastTakenDay is string && data.lastTakenDay.size() <= 20)) &&
+             (!('lastTakenTimeLabel' in data) || (data.lastTakenTimeLabel is string && data.lastTakenTimeLabel.size() <= 20)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidCareTask(data, userId) {
+      return data.keys().hasAll(['ownerId', 'title', 'dueHour', 'dueMinute', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'title', 'details', 'dueHour', 'dueMinute', 'lastCompletedDay', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             (!('details' in data) || (data.details is string && data.details.size() <= 400)) &&
+             isValidTime(data.dueHour, data.dueMinute) &&
+             (!('lastCompletedDay' in data) || (data.lastCompletedDay is string && data.lastCompletedDay.size() <= 20)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidAppointment(data, userId) {
+      return data.keys().hasAll(['ownerId', 'doctorName', 'dateISO', 'timeHour', 'timeMinute', 'isCompleted', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'doctorName', 'specialty', 'location', 'dateISO', 'timeHour', 'timeMinute', 'notes', 'isCompleted', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.doctorName is string && data.doctorName.size() >= 1 && data.doctorName.size() <= 100 &&
+             (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 80)) &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 160)) &&
+             data.dateISO is string && data.dateISO.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             isValidTime(data.timeHour, data.timeMinute) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 400)) &&
+             data.isCompleted is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidEmergencyContact(data, userId) {
+      return data.keys().hasAll(['ownerId', 'name', 'phoneNumber', 'isPrimary', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'name', 'relationship', 'phoneNumber', 'isPrimary', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             (!('relationship' in data) || (data.relationship is string && data.relationship.size() <= 80)) &&
+             data.phoneNumber is string && data.phoneNumber.size() >= 2 && data.phoneNumber.size() <= 32 &&
+             data.isPrimary is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidFamilyMember(data, userId) {
+      return data.keys().hasAll(['ownerId', 'name', 'relationship', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['ownerId', 'name', 'relationship', 'role', 'phoneNumber', 'createdAt', 'updatedAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.relationship is string && data.relationship.size() >= 1 && data.relationship.size() <= 60 &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 100)) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 32)) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidCareUpdate(data, userId) {
+      return data.keys().hasAll(['ownerId', 'authorName', 'message', 'createdAt']) &&
+             data.keys().hasOnly(['ownerId', 'authorName', 'message', 'createdAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 600 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidAdherenceLog(data, userId) {
+      return data.keys().hasAll(['ownerId', 'dayKey', 'medicationId', 'medicationName', 'createdAt']) &&
+             data.keys().hasOnly(['ownerId', 'dayKey', 'medicationId', 'medicationName', 'takenAtLabel', 'createdAt']) &&
+             data.ownerId is string && data.ownerId == userId && data.ownerId == request.auth.uid &&
+             data.dayKey is string && data.dayKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             isValidId(data.medicationId) &&
+             data.medicationName is string && data.medicationName.size() >= 1 && data.medicationName.size() <= 100 &&
+             (!('takenAtLabel' in data) || (data.takenAtLabel is string && data.takenAtLabel.size() <= 20)) &&
+             data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       isValidUserAccount(incoming(), userId) &&
+                       incoming().createdAt == request.time &&
+                       incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       isValidUserAccount(incoming(), userId) &&
+                       incoming().uid == existing().uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt == request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /profile/{profileId} {
+        allow get: if isOwner(userId) && isValidId(profileId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(profileId) &&
+                         isValidCareProfile(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(profileId) &&
+                         isValidCareProfile(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'recipientName', 'age', 'dateOfBirth', 'bloodType',
+                           'primaryDoctor', 'address', 'allergies', 'careNotes', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(profileId);
+      }
+
+      match /medications/{medicationId} {
+        allow get: if isOwner(userId) && isValidId(medicationId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(medicationId) &&
+                         isValidMedication(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(medicationId) &&
+                         isValidMedication(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time && (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['lastTakenDay', 'lastTakenTimeLabel', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['reminderEnabled', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'dosage', 'instructions', 'timeHour', 'timeMinute', 'reminderEnabled', 'updatedAt'])
+                         );
+        allow delete: if isOwner(userId) && isValidId(medicationId);
+      }
+
+      match /adherenceLogs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(logId) &&
+                         isValidAdherenceLog(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         parentUserExists(userId);
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId) && isValidId(taskId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(taskId) &&
+                         isValidCareTask(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(taskId) &&
+                         isValidCareTask(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time && (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['lastCompletedDay', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'details', 'dueHour', 'dueMinute', 'updatedAt'])
+                         );
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      match /appointments/{appointmentId} {
+        allow get: if isOwner(userId) && isValidId(appointmentId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(appointmentId) &&
+                         isValidAppointment(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(appointmentId) &&
+                         isValidAppointment(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time && (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['isCompleted', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['doctorName', 'specialty', 'location', 'dateISO', 'timeHour', 'timeMinute', 'notes', 'updatedAt'])
+                         );
+        allow delete: if isOwner(userId) && isValidId(appointmentId);
+      }
+
+      match /emergencyContacts/{contactId} {
+        allow get: if isOwner(userId) && isValidId(contactId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(contactId) &&
+                         isValidEmergencyContact(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(contactId) &&
+                         isValidEmergencyContact(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'relationship', 'phoneNumber', 'isPrimary', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(contactId);
+      }
+
+      match /familyMembers/{memberId} {
+        allow get: if isOwner(userId) && isValidId(memberId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(memberId) &&
+                         isValidFamilyMember(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time &&
+                         parentUserExists(userId);
+        allow update: if isOwner(userId) && isValidId(memberId) &&
+                         isValidFamilyMember(incoming(), userId) &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'relationship', 'role', 'phoneNumber', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(memberId);
+      }
+
+      match /careUpdates/{updateId} {
+        allow get: if isOwner(userId) && isValidId(updateId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(updateId) &&
+                         isValidCareUpdate(incoming(), userId) &&
+                         incoming().createdAt == request.time &&
+                         parentUserExists(userId);
+        allow delete: if isOwner(userId) && isValidId(updateId);
+      }
+    }
+  }
+}

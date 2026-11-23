@@ -1,0 +1,10 @@
+{
+  "name": "CareCircle",
+  "description": "CareCircle — Family Care & Reminder native Android app built with Kotlin, Jetpack Compose, Material 3, Room, and AlarmManager.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
