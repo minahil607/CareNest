@@ -72,7 +72,7 @@ CareNest is designed with a calming and welcoming visual style to make caregivin
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/CareNest.git
+   git clone https://github.com/minahil607/CareNest.git
    ```
 
 2. Open the project in Android Studio.
@@ -143,6 +143,8 @@ The goal of CareNest is to build a simple digital companion for family caregiver
 ## 👨‍💻 Author
 
 Developed as an Android application project.
+
+Minahil Ashraf
 
 ---
 
